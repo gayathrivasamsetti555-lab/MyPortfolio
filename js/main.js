@@ -49,6 +49,7 @@
     var z = radius*Math.cos(phi);
     var isCore = (label==="Claude"||label==="Gemini"||label==="RAG");
     var sprite = makeLabelSprite(label, isCore);
+    sprite.userData.isCore = isCore;
     sprite.position.set(x,y,z);
     group.add(sprite);
     nodes.push({sprite:sprite, base:new THREE.Vector3(x,y,z), phase:Math.random()*Math.PI*2});
@@ -76,6 +77,13 @@
     mouseY = (e.clientY/window.innerHeight - 0.5);
   });
 
+  var scrollProgress = 0;
+  window.addEventListener('scroll', function(){
+    var heroHeight = hero.clientHeight;
+    var sc = window.scrollY / heroHeight;
+    scrollProgress = Math.min(Math.max(sc, 0), 1);
+  }, {passive:true});
+
   var clock = new THREE.Clock();
   function animate(){
     requestAnimationFrame(animate);
@@ -83,10 +91,15 @@
     group.rotation.y = t*0.06 + mouseX*0.4;
     group.rotation.x = mouseY*0.25;
 
+    var pull = scrollProgress;
     nodes.forEach(function(n){
-      n.sprite.position.y = n.base.y + Math.sin(t*0.6 + n.phase)*0.6;
+      var target = n.base.clone().multiplyScalar(1 - pull*0.75);
+      n.sprite.position.x = target.x;
+      n.sprite.position.z = target.z;
+      n.sprite.position.y = target.y + Math.sin(t*0.6 + n.phase)*0.6*(1-pull);
+      n.sprite.material.opacity = (1 - pull) * (n.sprite.userData.isCore ? 1 : 0.85);
     });
-
+    group.position.y = -pull*4;
     renderer.render(scene, camera);
   }
   animate();
